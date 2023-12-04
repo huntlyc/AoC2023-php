@@ -2,7 +2,7 @@
 
 define('DEBUG', false);
 
-$input = file_get_contents(DEBUG ? 'test-input.txt' : 'input.txt');
+$input = file_get_contents(DEBUG ? 'test-input2.txt' : 'input.txt');
 
 $lines = explode("\n", $input);
 $rows = array();
@@ -19,7 +19,7 @@ foreach ($lines as $line) {
 
 function isSymbol($char) {
     if($char == '.') return false;
-    return preg_match('/[^0-9]/', $char);
+    return !preg_match('/[0-9]/',$char);
 }
 
 $validNumbers = array();
@@ -27,87 +27,76 @@ $validNumbers = array();
 for($row = 0; $row < count($rows); $row++) {
     $curNumAsStr = '';
     $parsingNum = false;
-    $validNumer = false;
-    for($col = 0; $col < count($rows[$row]); $col++) {
-        if(is_numeric($rows[$row][$col])) { // start parsing a number
+    $shouldCheck = false;
+    $numEndCol = false;
+
+    for($col = 0; $col < count($rows[$row]); $col++){
+
+        if(is_numeric($rows[$row][$col])) { // Start parsing a number
+
             $parsingNum = true;
             $curNumAsStr .= $rows[$row][$col];
-        }else if($parsingNum) { // stop parsing a number
-            if(!empty($curNumAsStr)) {
 
+            if($col === count($rows[$row]) - 1) { // End of row
+                $parsingNum = false;
+                $shouldCheck = true;
+                $numEndCol = true;
+            }
+        }else if($parsingNum) { // hit a symbol
+            $parsingNum = false;
+            $shouldCheck = true;
+        }
+
+        if($shouldCheck){
+            if(!empty($curNumAsStr)) {
                 $isValid = false;
                 $startCol = max(0, $col - strlen($curNumAsStr));
-                $endCol = max(0, $col - 1);
 
-                if($curNumAsStr == '617') {
-                    echo "row: $row, col: $col, startCol: $startCol, endCol: $endCol" . PHP_EOL;
+                if($numEndCol) { // End of row
+                    $startCol++;
                 }
 
-                // look in all adjacent positions for a non-numeric char
-                for($i = $startCol; $i <= $endCol; $i++) {
-                    if($i == $startCol){
+                for($i = $startCol; $i < $col; $i++) {
 
+                    // if not on col 0, check left
+                    if($i == $startCol && ($i - 1) > 0){
                         $l = $i - 1;
-                        if($l < 0) continue;
 
-                        // check left
-                        if(isSymbol($rows[$row][$l])){
+                        // check left, left-up, left-down
+                        if(isSymbol($rows[$row][$l]) ||
+                          ($row > 0 && isSymbol($rows[$row - 1][$l])) ||
+                          ($row < count($rows) - 1 && isSymbol($rows[$row + 1][$l]))){
                             $isValid = true;
-                            break;
-                        }
-                        // check up-left
-                        if($row > 0 && isSymbol($rows[$row - 1][$l])){
-                            $isValid = true;
-                            break;
-                        }
-                        // check down-left
-                        if($row < count($rows) - 1 && isSymbol($rows[$row + 1][$l])){
-                            $isValid = true;
-                            break;
                         }
                     }
 
-                    if($i == $endCol){
+                    // if not on row end, check right
+                    if($i == ($col-1) && (($col + 1) < (count($rows[$row]) - 1))){
                         $r = $i + 1;
-                        if($r > count($rows[$row]) - 1) continue;
-                        // check right
-                        if(isSymbol($rows[$row][$r])){
+                        // check right, right up, right down
+                        if(isSymbol($rows[$row][$r]) ||
+                          ($row > 0 && isSymbol($rows[$row - 1][$r])) ||
+                          ($row < count($rows) - 1 && isSymbol($rows[$row + 1][$r]))){
                             $isValid = true;
-                            break;
-                        }
-                        // check up-right
-                        if($row > 0 && isSymbol($rows[$row - 1][$r])){
-                            $isValid = true;
-                            break;
-                        }
-                        // check down-right
-                        if($row < count($rows) - 1 && isSymbol($rows[$row + 1][$r])){
-                            $isValid = true;
-                            break;
                         }
                     }
 
-                    // check up
-                    if($row > 0 && isSymbol($rows[$row - 1][$i])){
-                        $isValid = true;
-                        break;
-                    }
+                    // check up if not on first row
+                    if($row > 0 && isSymbol($rows[$row - 1][$i])) $isValid = true;
 
-                    // check down
-                    if($row < count($rows) - 1 && isSymbol($rows[$row + 1][$i])){
-                        $isValid = true;
-                        break;
-                    }
+                    // check down if not on last row
+                    if($row < (count($rows) - 1) && isSymbol($rows[$row + 1][$i])) $isValid = true;
                 }
-
 
                 if($isValid) {
                     $validNumbers[] = $curNumAsStr;
                 }
-
-                $curNumAsStr = '';
             }
+
+            // reset
+            $curNumAsStr = '';
             $parsingNum = false;
+            $shouldCheck = false;
         }
     }
 }
