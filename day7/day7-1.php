@@ -32,13 +32,19 @@ function calcHandValue($hand) {
 
     $value = 1;
     if(count($uniqCards) > 0){
-        $maxOfAKind = 0;
         foreach($uniqCards as $card){
-            $value += substr_count($hand, $card);
+            $ofAKind = substr_count($hand, $card) . PHP_EOL;
+            if($ofAKind > 1){
+                $value += $ofAKind;
+                if(count($uniqCards) == 2){ // three of a kind vs two pair
+                    $value += 1;
+                    echo "three of a kind vs two pair";
+                }
+            }
         }
     }
 
-    echo "$uniqCards - $value\n";
+    echo "v($hand): $value\n";
     return $value;
 
 }
@@ -52,13 +58,21 @@ function curHandBeatsHand($c, $h){
         'A' => 14,
     );
     if($c['value'] == $h['value']){
-        // check first card
-        $cf = $c['hand'][0];
-        $hf = $c['hand'][0];
-        if(!is_numeric($cf)) $cf = $map[$cf];
-        if(!is_numeric($hf)) $hf = $map[$hf];
 
-        return $cf > $hf;
+        // start checking the highest card, starting with the first card until we find a winner
+        foreach($c['hand'] as $i => $_card){
+            $cCard = $c['hand'][$i];
+            $hCard = $h['hand'][$i];
+
+            if(!is_numeric($cCard)) $cCard = $map[$cCard];
+            if(!is_numeric($hCard)) $hCard = $map[$hCard];
+
+            if($cCard > $hCard){
+                return true;
+            }else if($cCard < $hCard){
+                return false;
+            }
+        }
 
     }else if($c['value'] > $h['value']){
         return true;
@@ -67,18 +81,20 @@ function curHandBeatsHand($c, $h){
 }
 
 $sum = 0;
-foreach($hands as $curHand) {
+foreach($hands as &$curHand) {
     $rank = 1;
 
     foreach($hands as $hand){
+        if($curHand['hand'] == $hand['hand']) continue;
+
         if(curHandBeatsHand($curHand, $hand)){
             ++$rank;
-        }else {
-            break;
         }
     }
-    $sum += $rank * $curHand["stake"];
+    $curHand['rank'] = count($hands) - $rank;
+    $sum += $curHand['rank'] * $curHand["stake"];
 }
 
-echo $winnings . PHP_EOL;
+var_dump($hands);
+echo $sum . PHP_EOL;
 
