@@ -1,6 +1,6 @@
 <?php
 
-define('DEBUG', true);
+define('DEBUG', false);
 
 $input = file_get_contents(DEBUG ? 'test-input.txt' : 'input.txt');
 $lines = explode(PHP_EOL, $input);
@@ -30,21 +30,30 @@ foreach ($lines as $line) {
 function calcHandValue($hand) {
     $uniqCards = array_unique(str_split($hand));
 
-    $value = 1;
+    $value = 0;
     if(count($uniqCards) > 0){
         foreach($uniqCards as $card){
+            $tmpVal = 0;
             $ofAKind = substr_count($hand, $card) . PHP_EOL;
-            if($ofAKind > 1){
-                $value += $ofAKind;
-                if(count($uniqCards) == 2){ // three of a kind vs two pair
-                    $value += 1;
-                    echo "three of a kind vs two pair";
-                }
+            if($ofAKind == 5){
+                $tmpVal =  7; //5 of a kind
+            }else if($ofAKind == 4){
+                $tmpVal =  6; // 4 of a kind
+            }else if($ofAKind == 3 && count($uniqCards) == 2){
+                $tmpVal = 5; // full house
+            }else if($ofAKind == 3){
+                $tmpVal = 4;// 3 of a kind
+            }else if($ofAKind == 2 && count($uniqCards) == 3){
+                $tmpVal = 3; // two pair
+            }else if($ofAKind == 2 && count($uniqCards) == 4){
+                $tmpVal = 2; // one pair
+            }else {
+                $tmpVal = 1; // nothing, high card
             }
+            if($tmpVal > $value) $value = $tmpVal;
         }
     }
 
-    echo "v($hand): $value\n";
     return $value;
 
 }
@@ -57,10 +66,10 @@ function curHandBeatsHand($c, $h){
         'K' => 13,
         'A' => 14,
     );
-    if($c['value'] == $h['value']){
 
+    if($c['value'] == $h['value']){
         // start checking the highest card, starting with the first card until we find a winner
-        foreach($c['hand'] as $i => $_card){
+        foreach(str_split($c['hand']) as $i => $_card){
             $cCard = $c['hand'][$i];
             $hCard = $h['hand'][$i];
 
@@ -77,6 +86,7 @@ function curHandBeatsHand($c, $h){
     }else if($c['value'] > $h['value']){
         return true;
     }
+
     return false;
 }
 
@@ -91,10 +101,9 @@ foreach($hands as &$curHand) {
             ++$rank;
         }
     }
-    $curHand['rank'] = count($hands) - $rank;
+    $curHand['rank'] = $rank;
     $sum += $curHand['rank'] * $curHand["stake"];
 }
 
-var_dump($hands);
 echo $sum . PHP_EOL;
 
