@@ -1,29 +1,8 @@
 <?php
-// ans log
-// 253187950 =  too low
-// 252686427
-// 253188840
-
-
 
 define('JOKER_RULE', true);
 define('DEBUG', false);
 
-$input = file_get_contents(DEBUG ? 'test-input.txt' : 'input.txt');
-$lines = explode(PHP_EOL, $input);
-
-$winnings = 0;
-$hands = array(); // cards, stake, rank
-
-// Parse the input into a 2D array
-foreach ($lines as $line) {
-    if(empty($line)) continue;
-
-    list($hand,$stake) = explode(' ', $line);
-
-
-    $hands[] = array("hand" => $hand, 'value' => calcHandValue($hand), "stake" => $stake);
-}
 
 /*
     Five of a kind, where all five cards have the same label: AAAAA
@@ -88,6 +67,7 @@ function calcHandValue($hand) {
      **/
     if(JOKER_RULE && strpos($hand, 'J') !== FALSE){ // joker rule
         switch($value){
+            case $FIVE_OF_A_KIND: $value = $FIVE_OF_A_KIND; break; // no promotion from here, as good as it gets...
             case $FOUR_OF_A_KIND: //AAAJ
             case $FULL_HOUSE: //JJJAA
                 $value = $FIVE_OF_A_KIND;
@@ -143,8 +123,26 @@ function curHandBeatsHand($c, $h){
     return false;
 }
 
-$sum = 0;
-foreach($hands as &$curHand) {
+$input = file_get_contents(DEBUG ? 'test-input.txt' : 'input.txt');
+$lines = explode(PHP_EOL, $input);
+
+
+// parse input
+foreach ($lines as $line) {
+    if(empty($line)) continue;
+
+    list($hand,$stake) = explode(' ', $line);
+
+    $hands[] = array(
+        'hand' => $hand,
+        'value' => calcHandValue($hand),
+        'stake' => $stake
+    );
+}
+
+// calculate rank, then winnings
+$winnings = 0;
+foreach($hands as $curHand) {
     $rank = 1;
 
     foreach($hands as $hand){
@@ -154,9 +152,8 @@ foreach($hands as &$curHand) {
             ++$rank;
         }
     }
-    $curHand['rank'] = $rank;
-    $sum += $curHand['rank'] * $curHand["stake"];
+    $winnings += $rank * $curHand["stake"];
 }
 
-echo $sum . PHP_EOL;
+echo $winnings . PHP_EOL;
 
