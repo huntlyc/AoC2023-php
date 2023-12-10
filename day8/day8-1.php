@@ -21,14 +21,12 @@ foreach ($lines as $line) {
         if(preg_match('/\(([A-Z]+), ([A-Z]+)\)/', $line, $matches)){
             $locationMap[$location] = array($matches[1], $matches[2]);
         }
-        if(is_null($curLocation)){
-            $curLocation = $location;
-        }
     }
 }
 
 $steps = 0;
 $dirIdx = 0;
+$curLocation = 'AAA';
 while($curLocation !== 'ZZZ'){
     if($dir[$dirIdx] === 'L') $curLocation = $locationMap[$curLocation][0];
     if($dir[$dirIdx] === 'R') $curLocation = $locationMap[$curLocation][1];
