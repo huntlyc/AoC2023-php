@@ -36,7 +36,7 @@ for($row = 0; $row < count($grid); $row++){
 // Mappings for directions in x,y co-ords as movement vectors
 $validUp = [
     '|' => [0,-1],
-    '7' => [-1,-1], 
+    '7' => [-1,-1],
     'F' => [1,-1],
 ];
 $validDown = [
@@ -154,7 +154,7 @@ do{
 
     $c = $grid[$cy][$cx];
 
-    // up 
+    // up
     if(!$validMove && $newVel[1] != 1 && ($cy - 1) >= 0 && isValidUp($c, $grid[$cy - 1][$cx])){
         $nextSq = [$cy -1, $cx];
         if(empty($steps) || $steps[count($steps) -1] !== "{$nextSq[0]},{$nextSq[1]}"){ // don't go back
@@ -207,10 +207,32 @@ do{
 }while(count($steps) < 20000 && "{$curPos[0]},{$curPos[1]}" !== "{$startPos[0]},{$startPos[1]}");
 
 
-// for each row of the grid
-// if we have a point on it, mark that as the start and start searching for squares that are not in our steps
-// count those as those will be our empty inner loop squares
-$countEmptyInLoop = 0;
+/**
+ * Drawing algo to fill in the empty spaces up to walls
+ * We'll use it to remove all the outer empty spaces
+ * leaving us with dots only inside the loop
+ * @param $grid
+ * @param $x
+ * @param $y
+ * @param $newColor
+ * @param $oldColor
+ */
+function floodFill(&$grid, $x, $y, $newColor, $oldColor) {
+    $rows = count($grid);
+    $cols = count($grid[0]);
+
+    if ($x < 0 || $x >= $rows || $y < 0 || $y >= $cols || $grid[$x][$y] !== $oldColor || $grid[$x][$y] === $newColor) {
+        return;
+    }
+
+    $grid[$x][$y] = $newColor;
+
+    floodFill($grid, $x + 1, $y, $newColor, $oldColor);
+    floodFill($grid, $x - 1, $y, $newColor, $oldColor);
+    floodFill($grid, $x, $y + 1, $newColor, $oldColor);
+    floodFill($grid, $x, $y - 1, $newColor, $oldColor);
+}
+
 
 // prep grid by removing junk chars
 for($row = 0; $row < count($grid); $row++){
@@ -221,6 +243,43 @@ for($row = 0; $row < count($grid); $row++){
     }
 }
 
+function printGrid($grid){
+    for($row = 0; $row < count($grid); $row++){
+        for($col = 0; $col < count($grid[$row]); $col++){
+            echo $grid[$row][$col];
+        }
+        echo "\n";
+    }
+    echo "\n";
+}
+
+
+// cheat and add space around the grid so we can flood fill
+array_unshift($grid, array_fill(0, count($grid[0]), '.'));
+array_push($grid, array_fill(0, count($grid[0]), '.'));
+foreach($grid as &$row){
+    array_unshift($row, '.');
+    array_push($row, '.');
+}
+printGrid($grid);
+floodFill($grid, 0, 0,' ', '.');
+printGrid($grid);
+
+$countEmptyInLoop = 0;
+// count dots
+for($row = 0; $row < count($grid); $row++){
+    for($col = 0; $col < count($grid[$row]); $col++){
+        if($grid[$row][$col] == '.'){
+            ++$countEmptyInLoop;
+        }
+    }
+}
+
+echo $countEmptyInLoop . PHP_EOL;
+
+
+exit;
+
 for($row = 0; $row < count($grid); $row++){
     $insideLoop = false;
 
@@ -229,20 +288,26 @@ for($row = 0; $row < count($grid); $row++){
         $char = $grid[$row][$col];
 
         if($char == '|'){
-            if($col > 0 && !in_array($grid[$row][$col -1], ['J', '7'])){
-                $insideLoop = !$insideLoop;
-            }
+            $insideLoop = !$insideLoop;
         }else if($insideLoop){
             switch($char){
                 case '.': ++$countEmptyInLoop; $char = '.'; break;
-                case 'J':
                 case '7':
                     $insideLoop = false;
                     break;
+
+                /*
+                case '7':
+                case 'J':
+                case 'L':
+                case 'F':
+                    $insideLoop = false;
+                    break;
+                 */
             }
         }else{
             if(in_array($c, ['F','L'])){
-                $insideLoop = true;
+                //$insideLoop = true;
             }else if($char == '.'){
                 $char = ' ';
             }
