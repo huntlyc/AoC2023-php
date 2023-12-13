@@ -1,13 +1,13 @@
 <?php
 
-define('DEBUG', true);
+define('DEBUG', false);
 $testInputs = [
     'test2-input.txt',
     'test2-input2.txt',
     'test2-input3.txt',
 ];
 
-$input = file_get_contents(DEBUG ? $testInputs[1] : 'input.txt');
+$input = file_get_contents(DEBUG ? $testInputs[2] : 'input.txt');
 $lines = explode(PHP_EOL, $input);
 // Parse the input into 2d array
 $grid = array();
@@ -132,9 +132,6 @@ if(is_null($startChar)){
     throw New Error('Could not calc start char');
 }
 
-echo "start: $startChar ($startPos[0],$startPos[1])\n";
-
-
 $grid[$startPos[0]][$startPos[1]] = $startChar;
 
 
@@ -243,77 +240,34 @@ for($row = 0; $row < count($grid); $row++){
     }
 }
 
-function printGrid($grid){
-    for($row = 0; $row < count($grid); $row++){
-        for($col = 0; $col < count($grid[$row]); $col++){
-            echo $grid[$row][$col];
-        }
-        echo "\n";
-    }
-    echo "\n";
+
+// remove u an n bends, and change snake bends to pipes
+for($row = 0; $row < count($grid); $row++){
+    $tmp = implode('', $grid[$row]);
+    $tmp = str_replace('-', '', $tmp); // remove these to collapse potential snake bends
+    $tmp = str_replace('FJ', '|', $tmp);
+    $tmp = str_replace('L7', '|', $tmp);
+    $tmp = str_replace('LJ', '', $tmp);
+    $tmp = str_replace('F7', '', $tmp);
+    $grid[$row] = str_split($tmp);
 }
 
 
-// cheat and add space around the grid so we can flood fill
-array_unshift($grid, array_fill(0, count($grid[0]), '.'));
-array_push($grid, array_fill(0, count($grid[0]), '.'));
-foreach($grid as &$row){
-    array_unshift($row, '.');
-    array_push($row, '.');
-}
-printGrid($grid);
-floodFill($grid, 0, 0,' ', '.');
-printGrid($grid);
-
-$countEmptyInLoop = 0;
-// count dots
+// loop grid and figure out inner spaces
+$count = 0;
+$outside = true;
 for($row = 0; $row < count($grid); $row++){
     for($col = 0; $col < count($grid[$row]); $col++){
-        if($grid[$row][$col] == '.'){
-            ++$countEmptyInLoop;
+        if($grid[$row][$col] == '|'){
+            $outside = !$outside;
+        }else{
+            if(!$outside){
+                $count++;
+            }
         }
     }
 }
 
-echo $countEmptyInLoop . PHP_EOL;
-
+echo $count .PHP_EOL;
 
 exit;
-
-for($row = 0; $row < count($grid); $row++){
-    $insideLoop = false;
-
-
-    for($col = 0; $col < count($grid[$row]); $col++){
-        $char = $grid[$row][$col];
-
-        if($char == '|'){
-            $insideLoop = !$insideLoop;
-        }else if($insideLoop){
-            switch($char){
-                case '.': ++$countEmptyInLoop; $char = '.'; break;
-                case '7':
-                    $insideLoop = false;
-                    break;
-
-                /*
-                case '7':
-                case 'J':
-                case 'L':
-                case 'F':
-                    $insideLoop = false;
-                    break;
-                 */
-            }
-        }else{
-            if(in_array($c, ['F','L'])){
-                //$insideLoop = true;
-            }else if($char == '.'){
-                $char = ' ';
-            }
-        }
-        echo $char;
-    }
-    echo "\n";
-}
-echo $countEmptyInLoop . PHP_EOL;
