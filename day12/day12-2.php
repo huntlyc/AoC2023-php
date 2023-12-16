@@ -13,7 +13,24 @@ foreach ($lines as $line){
     list($springs, $groups) = explode(" ", $line);
     $groups = explode(',', $groups);
 
-    $result = findPosArrangements($springs, $groups);
+
+    $unfoldedSprings = '';
+    // unfold the springs
+    for($i = 0; $i < 5; $i++){
+        $unfoldedSprings .= $springs . '?';
+        if($i == 4){
+            $unfoldedSprings = substr($unfoldedSprings, 0, -1);
+        }
+    }
+
+    $unfoldedGroups = [];
+    for($i = 0; $i < 5; $i++){
+        foreach($groups as $group){
+            $unfoldedGroups[] = $group;
+        }
+    }
+
+    $result = findPosArrangements($unfoldedSprings, $unfoldedGroups);
     $sum += $result;
 }
 
