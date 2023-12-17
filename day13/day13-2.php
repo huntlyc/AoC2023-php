@@ -1,6 +1,13 @@
 <?php
 
-define('DEBUG', true);
+/**
+ * 30605 - too high
+ * 26777 - too high
+ * 24244 - too high
+ * 23737 - incorrect
+ * 22906 - correct
+ **/
+define('DEBUG', false);
 
 $input = file_get_contents(DEBUG ? 'test-input.txt' : 'input.txt');
 $lines = explode(PHP_EOL, $input);
@@ -21,174 +28,83 @@ foreach ($lines as $line){
     $grid[] = str_split($line);
 }
 
-// do last grid
-if(!empty($grid)){
-    $rPoint = getReflectionDetails($grid);
-    $sum += $rPoint['point'] * $rPoint['multiplier'];
-    $grids[] = $grid;
-    $grid = [];
-}
 
 foreach($grids as $grid){
-    // pt 1 get reflection point
-    $rPoint = getReflectionDetails($grid);
-    echo "was\n";
-    print_r($rPoint);
-
-
-    // for pt2 get opposite reflection point, fixing smudge
-    if($rPoint['type'] == 'row'){
-        $rPoint = getReflectionDetails($grid, 'col');
-    } else if($rPoint['type'] == 'col'){
-        $rPoint = getReflectionDetails($grid, 'row');
-    }
-    echo "now\n";
-    print_r($rPoint);
-    echo "/now\n";
-    if(is_null($rPoint)){
-        paintGrid($grid);
-        throw new Exception("No reflection point found");
-        die;
-    }else{
-        $sum += $rPoint['point'] * $rPoint['multiplier'];
-    }
-}
-
-function paintGrid($grid){
-    foreach($grid as $row){
-        echo implode('', $row) . PHP_EOL;
-    }
-    echo PHP_EOL;
 }
 
 
+/**
+ * Find the total diff count for rows from a start index
+ * @param $grid - 2d array of chars
+ * @param $curRowIdx - current row index
+ * @return int - diff count
+ */
+function diff_row(&$grid, $curRowIdx){
+    $remainRowCount = min($curRowIdx + 1, count($grid) - $curRowIdx - 1);
 
+    $sum = 0;
+    for($rowIdx = 0; $rowIdx < $remainRowCount; $rowIdx++){
+        $rowBefore = $grid[$curRowIdx - $rowIdx];
+        $rowAFter = $grid[$curRowIdx + $rowIdx + 1];
 
-
-function horizLines($grid){
-    $horiz = [];
-    for($row = 0; $row < count($grid); $row++){
-        $horiz[] = [
-            'row' => $grid[$row],
-            'hash' => sha1(implode('',$grid[$row])),
-        ];
+        $sum += count(array_diff_assoc($rowBefore, $rowAFter));
     }
-    return $horiz;
+    return $sum;
 }
 
-function vertLines($grid){
-    $verts = [];
-    for($col = 0; $col < count($grid[0]); $col++){
-        $verts[] = [
-            'row' => array_column($grid, $col),
-            'hash' => sha1(implode('', array_column($grid, $col)))
-        ];
+
+/**
+ * Find the total diff count for cols from a start index
+ * @param $grid - 2d array of chars
+ * @param $curColIdx - current col index
+ * @return int - diff count
+ */
+function diff_col(&$grid, $curColIdx){
+    $remainColCount = min($curColIdx + 1, count($grid[0]) - $curColIdx - 1);
+
+    $sum = 0;
+    for($rowIdx = 0; $rowIdx < $remainColCount; $rowIdx++){
+        $colBefore = array_column($grid, $curColIdx - $rowIdx);
+        $colAfter = array_column($grid, $curColIdx + $rowIdx + 1);
+
+        $sum += count(array_diff_assoc($colBefore, $colAfter));
     }
-    return $verts;
+    return $sum;
 }
+
 
 /**
  * Find the reflection point in the grid
- * @param array $grid
- * @param string $dir - 'row' or 'col' to only look for that type of reflection
- * @return array|bool - array with keys 'point' and 'type' or false if no reflection point found
+ *
+ * @param $grid - 2d array of chars
+ * @return int - score
  */
-function getReflectionDetails($grid, $dir = null){
-    $hit = null;
-    $fixSmudge = false;
-    if(!is_null($dir)){
-        $fixSmudge = true;
-    }
-    if(is_null($dir) || $dir == 'row'){
-        $horiz = horizLines($grid);
-        $r = findHitPoint($horiz, $fixSmudge);
-        if($r){
-            $hit = [
-                'point' => $r,
-                'type' => 'row',
-                'multiplier' => 100,
-            ];
-            if($dir == 'row'){
-                return $hit;
-            }
+function calcReflecPointScore(&$grid){
+    $row = false;
+    for($rowIdx = 0; $rowIdx < count($grid) - 1; $rowIdx++){
+        if(diff_row($grid, $rowIdx) == 1){
+            $row = $rowIdx + 1;
+            break;
         }
     }
 
-    if((is_null($hit) && is_null($dir)) || $dir == 'col'){
-        echo "checking col". PHP_EOL;
-        $verts = vertLines($grid);
-        $c = findHitPoint($verts, $fixSmudge);
-        if($c){
-            $hit = $c;
-            $hit = [
-                'point' => $c,
-                'type' => 'col',
-                'multiplier' => 1,
-            ];
+    $col = false;
+    for($colIdx = 0; $colIdx < count($grid[0]) - 1; $colIdx++){
+        if(diff_col($grid, $colIdx) == 1){
+            $col = $colIdx + 1;
+            break;
         }
     }
 
+    if($row) return $row * 100;
+    if($col) return $col;
 
-    return $hit;
-}
-function findHitPoint($lines, $fixSmudge = false){
-    $hitPoint = 0;
-    for($lineIdx = 1; $lineIdx < count($lines); $lineIdx++){
-        if($lines[$lineIdx]['hash'] == $lines[$lineIdx-1]['hash']){
-            $hitPoint = $lineIdx;
-            $count = 1;
-            for($j = $lineIdx-2; $j >= 0; $j--){
-                if($lineIdx + $count >= count($lines)){
-                    break;
-                }
-                if($lines[$j]['hash'] != $lines[$lineIdx+$count]['hash']){
-                    // check diff is only 1 char
-                    if($fixSmudge){
-                        $curGrid = array_map(function($row){
-                            return implode('', $row['row']);
-                        }, $lines);
-                        echo "curGrid: ". PHP_EOL;
-                        print_r($curGrid);
-                        $diff = 0;
-                        for($i = 0; $i < count($lines[$j]['row']); $i++){
-                            if($lines[$j]['row'][$i] != $lines[$lineIdx+$count]['row'][$i]){
-                                $diff++;
-                            }
-                        }
-                        if($diff == 1){
-                            // change the char in the previous row to match current row
-                            for($i = 0; $i < count($lines[$j]['row']); $i++){
-                                if($lines[$j]['row'][$i] != $lines[$lineIdx+$count]['row'][$i]){
-                                    $lines[$j]['row'][$i] = $lines[$lineIdx+$count]['row'][$i];
-                                }
-                            }
-                            $newGrid = array_map(function($row){
-                                return [
-                                    'row' => $row['row'],
-                                    'hash' => sha1(implode('', $row['row'])),
-                                ];
-                            }, $lines);
-
-                            $curGrid = array_map(function($row){
-                                return implode('', $row['row']);
-                            }, $newGrid);
-
-                            $newHit = findHitPoint($newGrid);
-                            return $newHit;
-                        }
-                    }
-                    $hitPoint = 0;
-                    break;
-                }
-                $count++;
-            }
-            if($hitPoint){
-                return $hitPoint;
-            }
-        }
-    }
-
-    return $hitPoint;
+    throw new Exception("No reflection point found");
 }
 
-echo $sum . PHP_EOL;
+
+
+foreach($grids as $grid){
+    $sum += calcReflecPointScore($grid);
+}
+echo "Sum: $sum". PHP_EOL;
